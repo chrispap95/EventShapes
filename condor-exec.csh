@@ -17,10 +17,10 @@ cd ${CMSSW}/src/
 scramv1 b ProjectRename
 eval `scramv1 runtime -csh` # cmsenv is an alias not on the workers
 cd EventShapes
-python3 -m pip install pyjet --user
+#python3 -m pip install pyjet --user
 python3 isrClassifierPhi_roc_step1.py -b ${bin} -m ${mode}
 
 # Output stage
-xrdcp -f ${sample}.p root://cmseos.fnal.gov//store/user/${USER}/SUEPs/QCD_processed/
+xrdcp -f ${bin}.p root://cmseos.fnal.gov//store/user/${USER}/SUEPs/QCD_processed/
 cd ${_CONDOR_SCRATCH_DIR}
 rm -rf ${CMSSW}

@@ -2,8 +2,6 @@ import uproot4 as uproot
 import uproot_methods
 import awkward1 as ak
 import numpy as np
-from math import pi
-import pyjet
 import eventShapesUtilities
 import suepsUtilities
 import math
