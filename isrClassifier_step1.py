@@ -10,24 +10,17 @@ import argparse
 
 def standardParser():
     parser = argparse.ArgumentParser(description='Run event shapes calculation.',usage='%(prog)s [options]')
-    parser.add_argument('-b','--bin', help='bin to process',required=True)
-    parser.add_argument('-m','--mode', help="Mode is 'bkg' for bkg and 'sig' for signal",required=True)
+    parser.add_argument('-i','--inputFile', help='input file to process (use EOS directory)',required=True)
+    parser.add_argument('-o','--outputFile', help='ouptut file',required=True)
     options = parser.parse_args()
     return options
 
 options = standardParser()
 
-base = '/Users/chrispap/'
-
-filename = {
-    'bkg': '/QCD/Autumn18.%s_TuneCP5_13TeV-madgraphMLM-pythia8_RA2AnalysisTree.root'%options.bin,
-    'sig': 'PrivateSamples.SUEP_2018_%s_13TeV-pythia8_n-100_0_RA2AnalysisTree.root'%options.bin
-}
-
 datasets = {
-    base + filename[options.mode]: 'TreeMaker2/PreSelection',
+    options.inputFile: 'TreeMaker2/PreSelection',
 }
-print("Input file: %s"%filename[options.mode])
+print("Input file: %s"%options.inputFile)
 
 events = uproot.lazy(datasets)
 
@@ -39,9 +32,13 @@ sph_dPhi = -np.ones((N_events,6))
 sph_relE = -np.ones((N_events,6))
 sph_highMult = -np.ones(N_events)
 sph_leadPt = -np.ones(N_events)
+sph_leadPt_ak4_suep = -np.ones(N_events)
+sph_leadPt_ak4_isr = -np.ones(N_events)
 sph_noLowMult = -np.ones(N_events)
 trackMultiplicity = -np.ones(N_events)
 beta_v = -np.ones((N_events,3))
+beta_ak4_suep_v = -np.ones((N_events,3))
+beta_ak4_isr_v = -np.ones((N_events,3))
 
 for ievt in range(N_events):
     if ievt%1000 == 0:
@@ -66,6 +63,15 @@ for ievt in range(N_events):
                     (ak.to_awkward0(tracks_fromPV0) >= 2) &
                     (ak.to_awkward0(tracks_matchedToPFCandidate) > 0)]
 
+    # Get AK4 jets
+    jets_pt = events['Jets.fCoordinates.fPt'][ievt]
+    jets_eta = events['Jets.fCoordinates.fEta'][ievt]
+    jets_phi = events['Jets.fCoordinates.fPhi'][ievt]
+    jets_e = events['Jets.fCoordinates.fE'][ievt]
+    jets = uproot_methods.TLorentzVectorArray.from_ptetaphie(ak.to_awkward0(jets_pt),
+                                                               ak.to_awkward0(jets_eta),
+                                                               ak.to_awkward0(jets_phi),
+                                                               ak.to_awkward0(jets_e))
 
     # Cluster AK15 jets and find ISR jet
     jetsAK15 = suepsUtilities.makeJets(tracks, 1.5)
@@ -77,17 +83,39 @@ for ievt in range(N_events):
     tracks_leadPt = tracks[suepsUtilities.deltar(tracks.eta, tracks.phi, jetsAK15[0].eta, jetsAK15[0].phi)<1.5]
     tracks_noLowMult = tracks[suepsUtilities.deltar(tracks.eta, tracks.phi, isrJet.eta, isrJet.phi)>1.5]
 
+    # Filter jets
+    jets_SUEP = jets[suepsUtilities.deltar(jets.eta, jets.phi, suepJet.eta, suepJet.phi)<1.5]
+    jets_ISR = jets[suepsUtilities.deltar(jets.eta, jets.phi, isrJet.eta, isrJet.phi)<1.5]
+    jets_SUEP_total = uproot_methods.TLorentzVectorArray.from_cartesian([np.sum(jets_SUEP.x)],
+                                                                   [np.sum(jets_SUEP.y)],
+                                                                   [np.sum(jets_SUEP.z)],
+                                                                   [np.sum(jets_SUEP.E)])
+    jets_ISR_total = uproot_methods.TLorentzVectorArray.from_cartesian([np.sum(jets_ISR.x)],
+                                                                  [np.sum(jets_ISR.y)],
+                                                                  [np.sum(jets_ISR.z)],
+                                                                  [np.sum(jets_ISR.E)])
+
     # Boost event
     beta = suepJet.p3/suepJet.energy
+    beta_ak4_suep = jets_SUEP_total.p3/jets_SUEP_total.energy
+    beta_ak4_isr = -jets_ISR_total.p3/jets_ISR_total.energy
     beta_v[ievt,0] = beta[0].x
     beta_v[ievt,1] = beta[0].y
     beta_v[ievt,2] = beta[0].z
+    beta_ak4_suep_v[ievt,0] = beta_ak4_suep[0].x
+    beta_ak4_suep_v[ievt,1] = beta_ak4_suep[0].y
+    beta_ak4_suep_v[ievt,2] = beta_ak4_suep[0].z
+    beta_ak4_isr_v[ievt,0] = beta_ak4_isr[0].x
+    beta_ak4_isr_v[ievt,1] = beta_ak4_isr[0].y
+    beta_ak4_isr_v[ievt,2] = beta_ak4_isr[0].z
     tracks_bst = tracks.boost(-beta)
     isrJet_bst = isrJet.boost(-beta)
 
     # Calculate various subcases
     tracks_bst_highMult = tracks_highMult.boost(-beta)
     tracks_bst_leadPt = tracks_leadPt.boost(-beta)
+    tracks_bst_leadPt_ak4_suep = tracks_leadPt.boost(-beta_ak4_suep)
+    tracks_bst_leadPt_ak4_isr = tracks_leadPt.boost(-beta_ak4_isr)
     tracks_bst_noLowMult = tracks_noLowMult.boost(-beta)
     total_E = np.sum(tracks_bst.E)
     iBin = 0
@@ -111,10 +139,14 @@ for ievt in range(N_events):
     sphTensor_allTracks = eventShapesUtilities.sphericityTensor(tracks_bst)
     sphTensor_highMult = eventShapesUtilities.sphericityTensor(tracks_bst_highMult)
     sphTensor_leadPt = eventShapesUtilities.sphericityTensor(tracks_bst_leadPt)
+    sphTensor_leadPt_ak4_suep = eventShapesUtilities.sphericityTensor(tracks_bst_leadPt_ak4_suep)
+    sphTensor_leadPt_ak4_isr = eventShapesUtilities.sphericityTensor(tracks_bst_leadPt_ak4_isr)
     sphTensor_noLowMult = eventShapesUtilities.sphericityTensor(tracks_bst_noLowMult)
     sph_allTracks[ievt] = eventShapesUtilities.sphericity(sphTensor_allTracks)
     sph_highMult[ievt] = eventShapesUtilities.sphericity(sphTensor_highMult)
     sph_leadPt[ievt] = eventShapesUtilities.sphericity(sphTensor_leadPt)
+    sph_leadPt_ak4_suep[ievt] = eventShapesUtilities.sphericity(sphTensor_leadPt_ak4_suep)
+    sph_leadPt_ak4_isr[ievt] = eventShapesUtilities.sphericity(sphTensor_leadPt_ak4_isr)
     sph_noLowMult[ievt] = eventShapesUtilities.sphericity(sphTensor_noLowMult)
 
     trackMultiplicity[ievt] = tracks.size
@@ -132,11 +164,15 @@ sph_dPhi = sph_dPhi[HT >= 1200]
 sph_relE = sph_relE[HT >= 1200]
 sph_highMult = sph_highMult[HT >= 1200]
 sph_leadPt = sph_leadPt[HT >= 1200]
+sph_leadPt_ak4_suep = sph_leadPt_ak4_suep[HT >= 1200]
+sph_leadPt_ak4_isr = sph_leadPt_ak4_isr[HT >= 1200]
 sph_noLowMult = sph_noLowMult[HT >= 1200]
 beta_v = beta_v[HT >= 1200]
+beta_ak4_suep_v = beta_ak4_suep_v[HT >= 1200]
+beta_ak4_isr_v = beta_ak4_isr_v[HT >= 1200]
 trackMultiplicity = trackMultiplicity[HT >= 1200]
 
-with open("%s_sphericity.p"%options.bin, "wb") as f:
+with open(options.outputFile, "wb") as f:
     pickle.dump(N_events, f)
     pickle.dump(CrossSection, f)
     pickle.dump(HT, f)
@@ -145,6 +181,10 @@ with open("%s_sphericity.p"%options.bin, "wb") as f:
     pickle.dump(sph_relE, f)
     pickle.dump(sph_highMult, f)
     pickle.dump(sph_leadPt, f)
+    pickle.dump(sph_leadPt_ak4_suep, f)
+    pickle.dump(sph_leadPt_ak4_isr, f)
     pickle.dump(sph_noLowMult, f)
     pickle.dump(beta_v, f)
+    pickle.dump(beta_ak4_suep_v, f)
+    pickle.dump(beta_ak4_isr_v, f)
     pickle.dump(trackMultiplicity, f)
