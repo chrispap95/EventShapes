@@ -110,3 +110,15 @@ def removeMaxE(particles, N=1):
         particles = particles[mask]
         particles = removeMaxE(particles, N-1)
         return particles
+
+def significance(sig, bkg):
+    # Remove warnings for zero division
+    sig[(bkg == 0) & (sig == 0)] = 0.01
+    bkg[(bkg == 0) & (sig == 0)] = 0.01
+    bkg[(bkg == 0) & (sig != 0)] = 0.01*sig[(bkg == 0) & (sig != 0)]
+    s1 = sig/np.sqrt(bkg)
+    s2 = sig/np.sqrt(sig+bkg)
+    x = sig/bkg
+    k = bkg*((1+x)*np.log(1+x)-x)
+    s3 = np.sqrt(2*k)
+    return [s1, s2, s3]

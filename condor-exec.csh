@@ -17,7 +17,7 @@ cd ${CMSSW}/src/
 scramv1 b ProjectRename
 eval `scramv1 runtime -csh` # cmsenv is an alias not on the workers
 cd EventShapes
-#python3 -m pip install pyjet --user
+python3 -m pip freeze
 python3 isrClassifierPhi_roc_step1.py -b ${bin} -m ${mode}
 
 # Output stage

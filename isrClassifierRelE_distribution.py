@@ -18,7 +18,7 @@ boost = False
 isSignal = True
 
 # Get the file and import using uproot
-mMed = 750
+mMed = 1000
 mDark = 2
 temp = 2
 #decayMode = 'darkPho'
@@ -64,6 +64,7 @@ Tracks_y = Tracks_y[HT > 1200]
 Tracks_z = Tracks_z[HT > 1200]
 Tracks_fromPV0 = Tracks_fromPV0[HT > 1200]
 Tracks_matchedToPFCandidate = Tracks_matchedToPFCandidate[HT > 1200]
+HT = HT[HT > 1200]
 
 Tracks_E = np.sqrt(Tracks_x**2+Tracks_y**2+Tracks_z**2+0.13957**2)
 Tracks = uproot_methods.TLorentzVectorArray.from_cartesian(Tracks_x, Tracks_y, Tracks_z, Tracks_E)
@@ -83,8 +84,8 @@ GenParticles = GenParticles[(GenParticles_Status == 1) & (GenParticles.pt > 1) &
 FromScalarParticles = GenParticles[GenParticles_ParentId == 999998]
 IsrParticles = GenParticles[GenParticles_ParentId != 999998]
 
-hist1 = bh.Histogram(bh.axis.Regular(100, -math.pi, math.pi))
-hist2 = bh.Histogram(bh.axis.Regular(100, -math.pi, math.pi))
+hist1 = bh.Histogram(bh.axis.Regular(100, 0, 1))
+hist2 = bh.Histogram(bh.axis.Regular(100, 0, 1))
 
 for ievt in range(GenParticles_Status.size):
     # Gen particles
@@ -104,29 +105,37 @@ for ievt in range(GenParticles_Status.size):
     isrParticles_bst = isrParticles.boost(-suepJet.p3/suepJet.energy)
     isrJet_bst = isrJet.boost(-suepJet.p3/suepJet.energy)
 
-    dphi_fromScalar_bst = fromScalarParticles_bst.phi-isrJet_bst[0].phi
-    dphi_ISR_bst = isrParticles_bst.phi-isrJet_bst[0].phi
-    dphi_fromScalar_bst[dphi_fromScalar_bst > math.pi] -= 2*math.pi
-    dphi_fromScalar_bst[dphi_fromScalar_bst < -math.pi] += 2*math.pi
-    dphi_ISR_bst[dphi_ISR_bst > math.pi] -= 2*math.pi
-    dphi_ISR_bst[dphi_ISR_bst < -math.pi] += 2*math.pi
 
-    hist1.fill(dphi_fromScalar_bst)
-    hist2.fill(dphi_ISR_bst)
+    # Cluster gen AK2 jets
+    genJetsAK2_fromScalar = suepsUtilities.makeJets(fromScalarParticles, 0.2, mode='new')
+    genJetsAK2_ISR = suepsUtilities.makeJets(isrParticles, 0.2, mode='new')
+    genJetsAK2_fromScalar_bst = suepsUtilities.makeJets(fromScalarParticles_bst, 0.2, mode='new')
+    genJetsAK2_ISR_bst = suepsUtilities.makeJets(isrParticles_bst, 0.2, mode='new')
+
+    total_E = np.sum(fromScalarParticles_bst.E)+np.sum(isrParticles_bst.E)
+    fromScalarParticles_E = fromScalarParticles_bst.E/total_E
+    isrParticles_E = isrParticles_bst.E/total_E
+
+    hist1.fill(fromScalarParticles_E)
+    hist2.fill(isrParticles_E)
 
 # Plot results
 fig = plt.figure(figsize=(8,8))
 ax = plt.gca()
 
-ax.plot(hist1.axes[0].centers, hist1.view(), drawstyle='steps', color='b', linestyle='--', label='from Scalar - boosted');
-ax.plot(hist2.axes[0].centers, hist2.view(), drawstyle='steps', color='r', linestyle='--', label='from ISR - boosted');
+ax.plot(hist1.axes[0].centers, hist1.view(), drawstyle='steps', color='b', linestyle='-', label='from Scalar');
+ax.plot(hist2.axes[0].centers, hist2.view(), drawstyle='steps', color='r', linestyle='-', label='from ISR');
 
 #ax.set_xlim([0,1])
-ax.set_xlabel('$\Delta\phi$')
+ax.set_xlabel('$E/\sum E$')
+#ax.set_xlabel('$1-\epsilon_{SUEP}$')
+ax.set_xscale('log')
 ax.set_yscale('log')
 
-ax.set_ylim(top=100000)
+#ax.set_ylim(top=100000)
+#ax.set_ylabel('$\epsilon_{ISR}$')
 plt.legend()
+#fig.savefig('Results/%s.pdf'%variable)
 
 # build a rectangle in axes coords
 left, width = .0, 1.
