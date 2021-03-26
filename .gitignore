@@ -3,3 +3,9 @@
 *.root
 *.pdf
 *.png
+*.jdl
+*.tgz
+
+docker_stderror
+logs/
+__pycache__/
