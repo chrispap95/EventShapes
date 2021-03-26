@@ -19,6 +19,8 @@ def sphericityTensor(particles,r=2):
     return s
 
 def sphericity(s):
+    if !np.isfinite(s).all():
+        s = np.zeros((3,3))
     s_eigvalues, s_eigvectors = np.linalg.eig(s)
     s_eigvalues = np.sort(s_eigvalues)
     sphericity = 1.5*(s_eigvalues[0]+s_eigvalues[1])
