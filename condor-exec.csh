@@ -16,11 +16,7 @@ setenv SCRAM_ARCH slc7_amd64_gcc820
 cd ${CMSSW}/src/
 scramv1 b ProjectRename
 eval `scramv1 runtime -csh` # cmsenv is an alias not on the workers
-source /cvmfs/cms.cern.ch/slc7_amd64_gcc900/external/py2-uproot4/0.0.27/etc/profile.d/init.csh
-./scram-pip -v 3 uproot4
-eval `scramv1 runtime -csh` # cmsenv is an alias not on the workers
 cd EventShapes
-python3 -m pip freeze
 python3 isrClassifier_step1.py -i ${input} -o ${output}
 
 # Output stage

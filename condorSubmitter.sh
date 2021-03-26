@@ -1,12 +1,9 @@
 #!/usr/bin/sh
 
 xrootdResolver=root://cmseos.fnal.gov/
-
-
 base1=${xrootdResolver}/store/user/kdipetri/SUEP/Production_v0.2/2018/NTUP
 base2=${xrootdResolver}/store/user/kdipetri/SUEP/Production_v1.0/2018/NTUP
 base3=${xrootdResolver}/store/user/kdipetri/SUEP/Production_v1.1/2018/NTUP
-
 signalPrefix=PrivateSamples.SUEP_2018
 
 samples=(${base1}/Autumn18.QCD_HT1000to1500_TuneCP5_13TeV-madgraphMLM-pythia8_RA2AnalysisTree.root\
@@ -84,12 +81,18 @@ cat > condor_${name[${j}]}.jdl << "EOF"
 universe = vanilla
 Executable = condor-exec.csh
 EOF
-echo "Arguments = ${i} ${name[${j}]}.p CMSSW_11_2_0" >> condor_${name[${j}]}.jdl
+echo "Arguments = ${i} ${name[${j}]}.p ${CMSSW_VERSION}" >> condor_${name[${j}]}.jdl
 cat >> condor_${name[${j}]}.jdl << "EOF"
 Should_Transfer_Files = YES
 WhenToTransferOutput = ON_EXIT
 request_cpus = 4
-Transfer_Input_Files = condor-exec.csh, CMSSW_11_2_0.tgz
+EOF
+if [[ "${name[${j}]}" == "QCD_HT"[1-2]* ]];
+then
+echo "request_memory = 5000" >> condor_${name[${j}]}.jdl
+fi
+echo "Transfer_Input_Files = condor-exec.csh, ${CMSSW_VERSION}.tgz" >> condor_${name[${j}]}.jdl
+cat >> condor_${name[${j}]}.jdl << "EOF"
 Output = logs/python_$(Cluster)_$(Process).stdout
 Error = logs/python_$(Cluster)_$(Process).stderr
 Log = logs/python_$(Cluster)_$(Process).log
