@@ -12,6 +12,8 @@ def standardParser():
     parser = argparse.ArgumentParser(description='Run event shapes calculation.',usage='%(prog)s [options]')
     parser.add_argument('-i','--inputFile', help='input file to process (use EOS directory)',required=True)
     parser.add_argument('-o','--outputFile', help='ouptut file',required=True)
+    parser.add_argument('-n','--nParts', help='',required=False,default=1)
+    parser.add_argument('-p','--part', help='',required=False,default=1)
     options = parser.parse_args()
     return options
 
@@ -24,8 +26,8 @@ print("Input file: %s"%options.inputFile)
 
 events = uproot.lazy(datasets)
 
-N_events = len(events['Tracks.fCoordinates.fX'])
-#N_events = 10000
+N_events_tot = len(events['Tracks.fCoordinates.fX'])
+N_events = N_events_tot/options.nParts
 
 sph_allTracks = -np.ones(N_events)
 sph_dPhi = -np.ones((N_events,6))
@@ -40,7 +42,7 @@ beta_v = -np.ones((N_events,3))
 beta_ak4_suep_v = -np.ones((N_events,3))
 beta_ak4_isr_v = -np.ones((N_events,3))
 
-for ievt in range(N_events):
+for ievt in range((options.part-1)*N_events,options.part*N_events):
     if ievt%1000 == 0:
         print("Processing event %d. Progress: %.2f%%"%(ievt,100*ievt/N_events))
     if events['HT'][ievt] < 1200:

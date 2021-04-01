@@ -7,7 +7,9 @@ source /cvmfs/cms.cern.ch/cmsset_default.csh
 # Input section
 set input=$1
 set output=$2
-set CMSSW=$3
+set nParts=$3
+set part=$4
+set CMSSW=$5
 
 # Unpack, setup and execute the code
 tar -xf ${CMSSW}.tgz
@@ -17,7 +19,7 @@ cd ${CMSSW}/src/
 scramv1 b ProjectRename
 eval `scramv1 runtime -csh` # cmsenv is an alias not on the workers
 cd EventShapes
-python3 isrClassifier_step1.py -i ${input} -o ${output}
+python3 isrClassifier_step1.py -i ${input} -o ${output} -n ${nParts} -p ${part}
 
 # Output stage
 xrdcp -f ${output} root://cmseos.fnal.gov//store/user/${USER}/SUEPs/
