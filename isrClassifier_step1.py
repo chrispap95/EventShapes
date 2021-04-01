@@ -10,10 +10,10 @@ import argparse
 
 def standardParser():
     parser = argparse.ArgumentParser(description='Run event shapes calculation.',usage='%(prog)s [options]')
-    parser.add_argument('-i','--inputFile', help='input file to process (use EOS directory)',required=True)
-    parser.add_argument('-o','--outputFile', help='ouptut file',required=True)
-    parser.add_argument('-n','--nParts', help='',required=False,default=1)
-    parser.add_argument('-p','--part', help='',required=False,default=1)
+    parser.add_argument('-i','--inputFile', help='input file to process (use EOS directory)', required=True)
+    parser.add_argument('-o','--outputFile', help='ouptut file', required=True)
+    parser.add_argument('-n','--nParts', type=int, help='', required=False, default=1)
+    parser.add_argument('-p','--part', type=int, help='', required=False, default=1)
     options = parser.parse_args()
     return options
 
