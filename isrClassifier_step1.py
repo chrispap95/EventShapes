@@ -27,7 +27,7 @@ print("Input file: %s"%options.inputFile)
 events = uproot.lazy(datasets)
 
 N_events_tot = len(events['Tracks.fCoordinates.fX'])
-N_events = N_events_tot/options.nParts
+N_events = int(N_events_tot/options.nParts)
 
 sph_allTracks = -np.ones(N_events)
 sph_dPhi = -np.ones((N_events,6))
@@ -43,8 +43,9 @@ beta_ak4_suep_v = -np.ones((N_events,3))
 beta_ak4_isr_v = -np.ones((N_events,3))
 
 for ievt in range((options.part-1)*N_events,options.part*N_events):
+    ievt_normalized = ievt - (options.part-1)*N_events
     if ievt%1000 == 0:
-        print("Processing event %d. Progress: %.2f%%"%(ievt,100*ievt/N_events))
+        print("Processing event %d. Progress: %.2f%%"%(ievt,100*ievt_normalized/N_events))
     if events['HT'][ievt] < 1200:
         continue
 
@@ -101,15 +102,15 @@ for ievt in range((options.part-1)*N_events,options.part*N_events):
     beta = suepJet.p3/suepJet.energy
     beta_ak4_suep = jets_SUEP_total.p3/jets_SUEP_total.energy
     beta_ak4_isr = -jets_ISR_total.p3/jets_ISR_total.energy
-    beta_v[ievt,0] = beta[0].x
-    beta_v[ievt,1] = beta[0].y
-    beta_v[ievt,2] = beta[0].z
-    beta_ak4_suep_v[ievt,0] = beta_ak4_suep[0].x
-    beta_ak4_suep_v[ievt,1] = beta_ak4_suep[0].y
-    beta_ak4_suep_v[ievt,2] = beta_ak4_suep[0].z
-    beta_ak4_isr_v[ievt,0] = beta_ak4_isr[0].x
-    beta_ak4_isr_v[ievt,1] = beta_ak4_isr[0].y
-    beta_ak4_isr_v[ievt,2] = beta_ak4_isr[0].z
+    beta_v[ievt_normalized,0] = beta[0].x
+    beta_v[ievt_normalized,1] = beta[0].y
+    beta_v[ievt_normalized,2] = beta[0].z
+    beta_ak4_suep_v[ievt_normalized,0] = beta_ak4_suep[0].x
+    beta_ak4_suep_v[ievt_normalized,1] = beta_ak4_suep[0].y
+    beta_ak4_suep_v[ievt_normalized,2] = beta_ak4_suep[0].z
+    beta_ak4_isr_v[ievt_normalized,0] = beta_ak4_isr[0].x
+    beta_ak4_isr_v[ievt_normalized,1] = beta_ak4_isr[0].y
+    beta_ak4_isr_v[ievt_normalized,2] = beta_ak4_isr[0].z
     tracks_bst = tracks.boost(-beta)
     isrJet_bst = isrJet.boost(-beta)
 
@@ -124,7 +125,7 @@ for ievt in range((options.part-1)*N_events,options.part*N_events):
     for i in np.linspace(0.0018, 0.0024, 6):
         tracks_relE = tracks_bst[tracks_bst.E/total_E < i]
         sphTensor_relE = eventShapesUtilities.sphericityTensor(tracks_relE)
-        sph_relE[ievt,iBin] = eventShapesUtilities.sphericity(sphTensor_relE)
+        sph_relE[ievt_normalized,iBin] = eventShapesUtilities.sphericity(sphTensor_relE)
         iBin += 1
 
     # Find delta phi
@@ -135,7 +136,7 @@ for ievt in range((options.part-1)*N_events,options.part*N_events):
     for i in np.linspace(1.5, 1.8, 6):
         tracks_bst_dPhi = tracks_bst[abs(dPhi) > i]
         sphTensor_dPhi = eventShapesUtilities.sphericityTensor(tracks_bst_dPhi)
-        sph_dPhi[ievt,iBin] = eventShapesUtilities.sphericity(sphTensor_dPhi)
+        sph_dPhi[ievt_normalized,iBin] = eventShapesUtilities.sphericity(sphTensor_dPhi)
         iBin += 1
 
     sphTensor_allTracks = eventShapesUtilities.sphericityTensor(tracks_bst)
@@ -144,14 +145,14 @@ for ievt in range((options.part-1)*N_events,options.part*N_events):
     sphTensor_leadPt_ak4_suep = eventShapesUtilities.sphericityTensor(tracks_bst_leadPt_ak4_suep)
     sphTensor_leadPt_ak4_isr = eventShapesUtilities.sphericityTensor(tracks_bst_leadPt_ak4_isr)
     sphTensor_noLowMult = eventShapesUtilities.sphericityTensor(tracks_bst_noLowMult)
-    sph_allTracks[ievt] = eventShapesUtilities.sphericity(sphTensor_allTracks)
-    sph_highMult[ievt] = eventShapesUtilities.sphericity(sphTensor_highMult)
-    sph_leadPt[ievt] = eventShapesUtilities.sphericity(sphTensor_leadPt)
-    sph_leadPt_ak4_suep[ievt] = eventShapesUtilities.sphericity(sphTensor_leadPt_ak4_suep)
-    sph_leadPt_ak4_isr[ievt] = eventShapesUtilities.sphericity(sphTensor_leadPt_ak4_isr)
-    sph_noLowMult[ievt] = eventShapesUtilities.sphericity(sphTensor_noLowMult)
+    sph_allTracks[ievt_normalized] = eventShapesUtilities.sphericity(sphTensor_allTracks)
+    sph_highMult[ievt_normalized] = eventShapesUtilities.sphericity(sphTensor_highMult)
+    sph_leadPt[ievt_normalized] = eventShapesUtilities.sphericity(sphTensor_leadPt)
+    sph_leadPt_ak4_suep[ievt_normalized] = eventShapesUtilities.sphericity(sphTensor_leadPt_ak4_suep)
+    sph_leadPt_ak4_isr[ievt_normalized] = eventShapesUtilities.sphericity(sphTensor_leadPt_ak4_isr)
+    sph_noLowMult[ievt_normalized] = eventShapesUtilities.sphericity(sphTensor_noLowMult)
 
-    trackMultiplicity[ievt] = tracks.size
+    trackMultiplicity[ievt_normalized] = tracks.size
 
 # Getting cross section and HT and keeping only processed events
 CrossSection = ak.to_numpy(events['CrossSection'])
