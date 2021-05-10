@@ -11,7 +11,10 @@ import suepsUtilities
 
 plt.style.use(hep.style.ROOT)
 
-mass_sig = "1000"
+mMed = "400"
+mDark = "2"
+temp = "2"
+decay = "darkPho"
 applyTrkMltCut = True
 
 integrated_Luminosity = 137.19*1000 # fb^{-1} to pb^{-1}
@@ -19,13 +22,15 @@ integrated_Luminosity = 137.19*1000 # fb^{-1} to pb^{-1}
 # xs in pb
 xs_signal = {
     "125":34.8,
+    "200":21.4,
+    "300":11.2,
     "400":5.9,
     "750":0.5,
     "1000":0.17
 }
 
 # Get files
-with open("QCD_sphericity.p", "rb") as f:
+with open("data.nosync/QCD_sphericity.p", "rb") as f:
     N_events_bkg = pickle.load(f)
     CrossSection_bkg = pickle.load(f)
     HT_bkg = pickle.load(f)
@@ -34,11 +39,15 @@ with open("QCD_sphericity.p", "rb") as f:
     sph_bkg_relE = pickle.load(f)
     sph_bkg_highMult = pickle.load(f)
     sph_bkg_leadPt = pickle.load(f)
+    sph_bkg_leadPt_ak4_suep = pickle.load(f)
+    sph_bkg_leadPt_ak4_isr = pickle.load(f)
     sph_bkg_noLowMult = pickle.load(f)
     beta_bkg = pickle.load(f)
+    beta_bkg_ak4_suep = pickle.load(f)
+    beta_bkg_ak4_isr = pickle.load(f)
     trkMlt_bkg = pickle.load(f)
 
-with open("mMed-%s_mDark-2_temp-2_decay-darkPhoHad_sphericity.p"%mass_sig, "rb") as f:
+with open("data.nosync/SUEP_2018_mMed-%s_mDark-%s_temp-%s_decay-%s_0.p"%(mMed,mDark,temp,decay), "rb") as f:
     N_events_sig = pickle.load(f)
     CrossSection_sig = pickle.load(f)
     HT_sig = pickle.load(f)
@@ -47,13 +56,17 @@ with open("mMed-%s_mDark-2_temp-2_decay-darkPhoHad_sphericity.p"%mass_sig, "rb")
     sph_sig_relE = pickle.load(f)
     sph_sig_highMult = pickle.load(f)
     sph_sig_leadPt = pickle.load(f)
+    sph_sig_leadPt_ak4_suep = pickle.load(f)
+    sph_sig_leadPt_ak4_isr = pickle.load(f)
     sph_sig_noLowMult = pickle.load(f)
     beta_sig = pickle.load(f)
+    beta_sig_ak4_suep = pickle.load(f)
+    beta_sig_ak4_isr = pickle.load(f)
     trkMlt_sig = pickle.load(f)
 
 # Scale cross sections to weights
 CrossSection_bkg = integrated_Luminosity*CrossSection_bkg/N_events_bkg
-CrossSection_sig = integrated_Luminosity*xs_signal[mass_sig]*np.ones(CrossSection_sig.size)/N_events_sig
+CrossSection_sig = integrated_Luminosity*xs_signal[mMed]*np.ones(CrossSection_sig.size)/N_events_sig
 
 # Apply trkMlt cut
 if applyTrkMltCut:
@@ -107,14 +120,14 @@ for i in range(sph_bkg_relE.shape[1]):
 hist_sph_bkg_leadPt.fill(sph_bkg_leadPt, weight=CrossSection_bkg)
 hist_sph_bkg_highMult.fill(sph_bkg_highMult, weight=CrossSection_bkg)
 hist_sph_bkg_noLowMult.fill(sph_bkg_noLowMult, weight=CrossSection_bkg)
-hist_sph_sig_allTracks.fill(sph_sig_allTracks, weight=xs_signal[mass_sig])
+hist_sph_sig_allTracks.fill(sph_sig_allTracks, weight=xs_signal[mMed])
 for i in range(sph_bkg_dPhi.shape[1]):
-    hist_sph_sig_dPhi[i].fill(sph_sig_dPhi[:,i], weight=xs_signal[mass_sig])
+    hist_sph_sig_dPhi[i].fill(sph_sig_dPhi[:,i], weight=xs_signal[mMed])
 for i in range(sph_bkg_relE.shape[1]):
-    hist_sph_sig_relE[i].fill(sph_sig_relE[:,i], weight=xs_signal[mass_sig])
-hist_sph_sig_leadPt.fill(sph_sig_leadPt, weight=xs_signal[mass_sig])
-hist_sph_sig_highMult.fill(sph_sig_highMult, weight=xs_signal[mass_sig])
-hist_sph_sig_noLowMult.fill(sph_sig_noLowMult, weight=xs_signal[mass_sig])
+    hist_sph_sig_relE[i].fill(sph_sig_relE[:,i], weight=xs_signal[mMed])
+hist_sph_sig_leadPt.fill(sph_sig_leadPt, weight=xs_signal[mMed])
+hist_sph_sig_highMult.fill(sph_sig_highMult, weight=xs_signal[mMed])
+hist_sph_sig_noLowMult.fill(sph_sig_noLowMult, weight=xs_signal[mMed])
 
 # Number of columns for efficiency: 6*(relE) + 6*(dphi) + 3 baseline methods + allTracks
 nEntr_sig = np.zeros((sphericityBins,numberOfCases_relE_dPhi+3+1))
@@ -181,23 +194,23 @@ i = 2
 colorVal = scalarMap.to_rgba(values[0])
 ax2.hist(sph_bkg_dPhi[:, i], bins=25, range=(0, 1), weights=CrossSection_bkg, histtype='step',
         color=colorVal, linestyle='-', linewidth=2)
-ax2.hist(sph_sig_dPhi[:, i], bins=25, range=(0, 1), weights=xs_signal[mass_sig]*np.ones(sph_sig_dPhi[:, i].size), histtype='step',
+ax2.hist(sph_sig_dPhi[:, i], bins=25, range=(0, 1), weights=xs_signal[mMed]*np.ones(sph_sig_dPhi[:, i].size), histtype='step',
         color=colorVal, linestyle=':', linewidth=2)
 i = 12
 colorVal = scalarMap.to_rgba(values[1])
 ax2.hist(sph_bkg_relE[:, i-sph_bkg_dPhi.shape[1]-1], bins=25, range=(0, 1), weights=CrossSection_bkg, histtype='step',
         color=colorVal, linestyle='-', linewidth=2)
-ax2.hist(sph_sig_relE[:, i-sph_bkg_dPhi.shape[1]-1], bins=25, range=(0, 1), weights=xs_signal[mass_sig]*np.ones(sph_sig_relE[:, i-sph_bkg_dPhi.shape[1]-1].size), histtype='step',
+ax2.hist(sph_sig_relE[:, i-sph_bkg_dPhi.shape[1]-1], bins=25, range=(0, 1), weights=xs_signal[mMed]*np.ones(sph_sig_relE[:, i-sph_bkg_dPhi.shape[1]-1].size), histtype='step',
         color=colorVal, linestyle=':', linewidth=2)
 colorVal = scalarMap.to_rgba(values[2])
 ax2.hist(sph_bkg_leadPt, bins=25, range=(0, 1), weights=CrossSection_bkg, histtype='step',
         color=colorVal, linestyle='-', linewidth=2)
-ax2.hist(sph_sig_leadPt, bins=25, range=(0, 1), weights=xs_signal[mass_sig]*np.ones(sph_sig_leadPt.size), histtype='step',
+ax2.hist(sph_sig_leadPt, bins=25, range=(0, 1), weights=xs_signal[mMed]*np.ones(sph_sig_leadPt.size), histtype='step',
         color=colorVal, linestyle=':', linewidth=2)
 colorVal = scalarMap.to_rgba(values[3])
 ax2.hist(sph_bkg_highMult, bins=25, range=(0, 1), weights=CrossSection_bkg, histtype='step',
         color=colorVal, linestyle='-', linewidth=2)
-ax2.hist(sph_sig_highMult, bins=25, range=(0, 1), weights=xs_signal[mass_sig]*np.ones(sph_sig_highMult.size), histtype='step',
+ax2.hist(sph_sig_highMult, bins=25, range=(0, 1), weights=xs_signal[mMed]*np.ones(sph_sig_highMult.size), histtype='step',
         color=colorVal, linestyle=':', linewidth=2)
 
 # build a rectangle in axes coords
@@ -213,7 +226,7 @@ p = mpatches.Rectangle((left, bottom), width, height, fill=False,
 ax1.add_patch(p)
 
 # Print sample details
-ax1.text(center, top, 'signal is mMed%s_darkPhoHad'%mass_sig, horizontalalignment='center',
+ax1.text(center, top, 'signal is mMed%s_%s'%(mMed,decay), horizontalalignment='center',
         verticalalignment='bottom', transform=ax1.transAxes, fontsize=14)
 # Print selections
 ax1.text(left, top, '$H_{T} > 1200\,$GeV, tracks $p_{T} > 1\,$GeV',

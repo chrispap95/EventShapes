@@ -16,11 +16,14 @@ integrated_Luminosity = 137.19*1000
 
 # Setup figure amd parameters
 fig, (ax1, ax2) = plt.subplots(2,figsize=(10,10))
-values = range(3)
+values = range(6)
 massOrder = {
-    "400": 0,
-    "750": 1,
-    "1000": 2
+    "125": 0,
+    "200": 1,
+    "300": 2,
+    "400": 3,
+    "750": 4,
+    "1000": 5
 }
 jet = cm = plt.get_cmap('jet')
 cNorm  = colors.Normalize(vmin=0, vmax=values[-1])
@@ -36,19 +39,25 @@ trkMlt_space = np.linspace(min, max, bins)
 # Select s/sqrt(s+b) for significance
 significanceMode = 1
 
+mDark = "2"
+temp = "2"
+decay = "darkPho"
+
 # xs in pb
 xs_signal = {
     "125":34.8,
+    "200":21.4,
+    "300":11.2,
     "400":5.9,
     "750":0.5,
     "1000":0.17
 }
 
 # signal masses
-signalMasses = ['400', '750', '1000']
+signalMasses = ['125','200','300','400', '750', '1000']
 
 # Get files
-with open("QCD_sphericity.p", "rb") as f:
+with open("data.nosync/QCD_sphericity.p", "rb") as f:
     N_events_bkg = pickle.load(f)
     CrossSection_bkg = pickle.load(f)
     HT_bkg = pickle.load(f)
@@ -57,23 +66,30 @@ with open("QCD_sphericity.p", "rb") as f:
     sph_bkg_relE = pickle.load(f)
     sph_bkg_highMult = pickle.load(f)
     sph_bkg_leadPt = pickle.load(f)
+    sph_bkg_leadPt_ak4_suep = pickle.load(f)
+    sph_bkg_leadPt_ak4_isr = pickle.load(f)
     sph_bkg_noLowMult = pickle.load(f)
     beta_bkg = pickle.load(f)
+    beta_bkg_ak4_suep = pickle.load(f)
+    beta_bkg_ak4_isr = pickle.load(f)
     trkMlt_bkg = pickle.load(f)
 
 # Calculate significance for bkg
 CrossSection_bkg = integrated_Luminosity*CrossSection_bkg/N_events_bkg
 hist_trkMlt_bkg = bh.Histogram(bh.axis.Regular(bins, min, max))
+#CrossSection_bkg = CrossSection_bkg[trkMlt_bkg>=0]
+#trkMlt_bkg = trkMlt_bkg[trkMlt_bkg>=0]
 hist_trkMlt_bkg.fill(trkMlt_bkg, weight=CrossSection_bkg)
 nEntr_bkg = np.zeros(bins)
 for i in range(1,bins+1):
     nEntr_bkg[i-1] = hist_trkMlt_bkg[::sum]-hist_trkMlt_bkg[:i:sum]
 
 # Add bkg to distribution plot
-ax2.plot(trkMlt_space, nEntr_bkg, color='black', linestyle='-', linewidth=2, label='QCD')
+ax2.hist(trkMlt_bkg, bins=bins, range=(min, max), weights=CrossSection_bkg, histtype='step',
+         color='black', linestyle='-', linewidth=2, label='QCD')
 
-for mass_sig in signalMasses:
-    with open("mMed-%s_mDark-2_temp-2_decay-darkPhoHad_sphericity.p"%mass_sig, "rb") as f:
+for mMed in signalMasses:
+    with open("data.nosync/SUEP_2018_mMed-%s_mDark-%s_temp-%s_decay-%s_0.p"%(mMed,mDark,temp,decay), "rb") as f:
         N_events_sig = pickle.load(f)
         CrossSection_sig = pickle.load(f)
         HT_sig = pickle.load(f)
@@ -82,12 +98,16 @@ for mass_sig in signalMasses:
         sph_sig_relE = pickle.load(f)
         sph_sig_highMult = pickle.load(f)
         sph_sig_leadPt = pickle.load(f)
+        sph_sig_leadPt_ak4_suep = pickle.load(f)
+        sph_sig_leadPt_ak4_isr = pickle.load(f)
         sph_sig_noLowMult = pickle.load(f)
         beta_sig = pickle.load(f)
+        beta_sig_ak4_suep = pickle.load(f)
+        beta_sig_ak4_isr = pickle.load(f)
         trkMlt_sig = pickle.load(f)
 
     # Calculate significance for signal
-    CrossSection_sig = integrated_Luminosity*xs_signal[mass_sig]*np.ones(CrossSection_sig.size)/N_events_sig
+    CrossSection_sig = integrated_Luminosity*xs_signal[mMed]*np.ones(CrossSection_sig.size)/N_events_sig
     hist_trkMlt_sig = bh.Histogram(bh.axis.Regular(bins, min, max))
     hist_trkMlt_sig.fill(trkMlt_sig, weight=CrossSection_sig)
     nEntr_sig = np.zeros(bins)
@@ -96,18 +116,19 @@ for mass_sig in signalMasses:
 
     significance = np.zeros((3,bins))
     significance = suepsUtilities.significance(nEntr_sig, nEntr_bkg)
-    print("Maximum significance for mMed = %s GeV of %.2f at %d."%(mass_sig, np.nanmax(significance[1]), ((np.nanargmax(significance[1])+1)*(max-min)/bins)))
+    print("Maximum significance for mMed = %s GeV of %.2f at %d."%(mMed, np.nanmax(significance[1]), ((np.nanargmax(significance[1])+1)*(max-min)/bins)))
 
-    colorVal = scalarMap.to_rgba(values[massOrder[mass_sig]])
+    colorVal = scalarMap.to_rgba(values[massOrder[mMed]])
     ax1.plot(trkMlt_space, significance[significanceMode], '.-', color=colorVal)
-    ax2.plot(trkMlt_space, nEntr_sig, color=colorVal, label='$mMed = %s\,$GeV'%mass_sig,
+    ax2.hist(trkMlt_sig, bins=bins, range=(min, max), weights=CrossSection_sig,
+             histtype='step', color=colorVal, label='$mMed = %s\,$GeV'%mMed,
              linestyle='-', linewidth=2)
 
 # Set labels
 ax1.set_ylabel('significance')
 ax2.legend()
 ax2.set_xlabel('track multiplicity')
-ax2.set_ylabel('Events passing cut')
+ax2.set_ylabel('Events/bin')
 ax2.set_yscale('log')
 
 # build a rectangle in axes coords
@@ -123,7 +144,7 @@ p = mpatches.Rectangle((left, bottom), width, height, fill=False,
 ax1.add_patch(p)
 
 # Print sample details
-ax1.text(center, top, 'signal is darkPhoHad', horizontalalignment='center',
+ax1.text(center, top, 'signal is %s'%decay, horizontalalignment='center',
         verticalalignment='bottom', transform=ax1.transAxes, fontsize=14)
 # Print selections
 ax1.text(left, top, '$H_{T} > 1200\,$GeV, tracks $p_{T} > 1\,$GeV',
