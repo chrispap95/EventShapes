@@ -12,7 +12,8 @@ import suepsUtilities
 plt.style.use(hep.style.ROOT)
 
 # Change fb^{-1} to pb^{-1}
-integrated_Luminosity = 137.19*1000
+#integrated_Luminosity = 137.19*1000
+integrated_Luminosity = 59*1000
 
 # Setup figure amd parameters
 values = range(6)
@@ -83,8 +84,8 @@ trkMlt_bkg = trkMlt_bkg[trkMlt_bkg>=0]
 # Add bkg to distribution plot
 fig = plt.figure(figsize=(8,8))
 ax = plt.gca()
-xbins = np.linspace(0, 1, 50)
-ybins = np.linspace(0, 225, 50)
+xbins = np.linspace(0, 1, 20)
+ybins = np.linspace(0, 225, 35)
 counts, _, _ = np.histogram2d(sph_bkg_leadPt, trkMlt_bkg, bins=(xbins, ybins),
                               weights=CrossSection_bkg)
 mesh = ax.pcolormesh(xbins, ybins, counts.T, norm=mpl.colors.LogNorm())
@@ -111,7 +112,7 @@ ax.text(left, top, '$H_{T} > 1200\,$GeV, tracks $p_{T} > 1\,$GeV',
         horizontalalignment='left', verticalalignment='bottom',
         transform=ax.transAxes, fontsize=12)
 # integrated Luminosity
-ax.text(right, top, '$137\,$fb$^{-1}$',
+ax.text(right, top, '$59\,$fb$^{-1}$(13$\,$TeV)',
         horizontalalignment='right', verticalalignment='bottom',
         transform=ax.transAxes, fontsize=15)
 
