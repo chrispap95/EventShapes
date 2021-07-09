@@ -8,4 +8,6 @@
 
 docker_stderror
 logs/
+env.nosync/
+.ipynb_checkpoints/
 __pycache__/
