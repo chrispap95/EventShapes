@@ -8,113 +8,142 @@ import math
 import pickle
 import argparse
 
+
 def standardParser():
-    parser = argparse.ArgumentParser(description='Run event shapes calculation.',usage='%(prog)s [options]')
-    parser.add_argument('-b','--bin', help='bin to process',required=True)
-    parser.add_argument('-m','--mode', help="Mode is 'bkg' for bkg and 'sig' for signal",required=True)
+    parser = argparse.ArgumentParser(
+        description="Run event shapes calculation.", usage="%(prog)s [options]"
+    )
+    parser.add_argument("-b", "--bin", help="bin to process", required=True)
+    parser.add_argument(
+        "-m", "--mode", help="Mode is 'bkg' for bkg and 'sig' for signal", required=True
+    )
     options = parser.parse_args()
     return options
 
+
 options = standardParser()
 
-base = '/Users/chrispap/'
+base = "/Users/chrispap/"
 
 filename = {
-    'bkg': '/QCD/Autumn18.%s_TuneCP5_13TeV-madgraphMLM-pythia8_RA2AnalysisTree.root'%options.bin,
-    'sig': 'PrivateSamples.SUEP_2018_%s_13TeV-pythia8_n-100_0_RA2AnalysisTree.root'%options.bin
+    "bkg": "/QCD/Autumn18.%s_TuneCP5_13TeV-madgraphMLM-pythia8_RA2AnalysisTree.root"
+    % options.bin,
+    "sig": "PrivateSamples.SUEP_2018_%s_13TeV-pythia8_n-100_0_RA2AnalysisTree.root"
+    % options.bin,
 }
 
 datasets = {
-    base + filename[options.mode]: 'TreeMaker2/PreSelection',
+    base + filename[options.mode]: "TreeMaker2/PreSelection",
 }
-print("Input file: %s"%filename[options.mode])
+print("Input file: %s" % filename[options.mode])
 
 events = uproot.lazy(datasets)
 
-N_events = len(events['Tracks.fCoordinates.fX'])
-#N_events = 10000
+N_events = len(events["Tracks.fCoordinates.fX"])
+# N_events = 10000
 
 sph_allTracks = -np.ones(N_events)
-sph_dPhi = -np.ones((N_events,6))
-sph_relE = -np.ones((N_events,6))
+sph_dPhi = -np.ones((N_events, 6))
+sph_relE = -np.ones((N_events, 6))
 sph_highMult = -np.ones(N_events)
 sph_leadPt = -np.ones(N_events)
 sph_leadPt_ak4_suep = -np.ones(N_events)
 sph_leadPt_ak4_isr = -np.ones(N_events)
 sph_noLowMult = -np.ones(N_events)
 trackMultiplicity = -np.ones(N_events)
-beta_v = -np.ones((N_events,3))
-beta_ak4_suep_v = -np.ones((N_events,3))
-beta_ak4_isr_v = -np.ones((N_events,3))
+beta_v = -np.ones((N_events, 3))
+beta_ak4_suep_v = -np.ones((N_events, 3))
+beta_ak4_isr_v = -np.ones((N_events, 3))
 
 for ievt in range(N_events):
-    if ievt%1000 == 0:
-        print("Processing event %d. Progress: %.2f%%"%(ievt,100*ievt/N_events))
-    if events['HT'][ievt] < 1200:
+    if ievt % 1000 == 0:
+        print("Processing event %d. Progress: %.2f%%" % (ievt, 100 * ievt / N_events))
+    if events["HT"][ievt] < 1200:
         continue
 
-    tracks_x = events['Tracks.fCoordinates.fX'][ievt]
-    tracks_y = events['Tracks.fCoordinates.fY'][ievt]
-    tracks_z = events['Tracks.fCoordinates.fZ'][ievt]
-    tracks_fromPV0 = events['Tracks_fromPV0'][ievt]
-    tracks_matchedToPFCandidate = events['Tracks_matchedToPFCandidate'][ievt]
+    tracks_x = events["Tracks.fCoordinates.fX"][ievt]
+    tracks_y = events["Tracks.fCoordinates.fY"][ievt]
+    tracks_z = events["Tracks.fCoordinates.fZ"][ievt]
+    tracks_fromPV0 = events["Tracks_fromPV0"][ievt]
+    tracks_matchedToPFCandidate = events["Tracks_matchedToPFCandidate"][ievt]
 
-    tracks_E = np.sqrt(tracks_x**2+tracks_y**2+tracks_z**2+0.13957**2)
-    tracks = uproot_methods.TLorentzVectorArray.from_cartesian(ak.to_awkward0(tracks_x),
-                                                               ak.to_awkward0(tracks_y),
-                                                               ak.to_awkward0(tracks_z),
-                                                               ak.to_awkward0(tracks_E))
+    tracks_E = np.sqrt(tracks_x**2 + tracks_y**2 + tracks_z**2 + 0.13957**2)
+    tracks = uproot_methods.TLorentzVectorArray.from_cartesian(
+        ak.to_awkward0(tracks_x),
+        ak.to_awkward0(tracks_y),
+        ak.to_awkward0(tracks_z),
+        ak.to_awkward0(tracks_E),
+    )
     # Select good tracks
-    tracks = tracks[(tracks.pt > 1.) &
-                    (abs(tracks.eta) < 2.5) &
-                    (ak.to_awkward0(tracks_fromPV0) >= 2) &
-                    (ak.to_awkward0(tracks_matchedToPFCandidate) > 0)]
+    tracks = tracks[
+        (tracks.pt > 1.0)
+        & (abs(tracks.eta) < 2.5)
+        & (ak.to_awkward0(tracks_fromPV0) >= 2)
+        & (ak.to_awkward0(tracks_matchedToPFCandidate) > 0)
+    ]
 
     # Get AK4 jets
-    jets_pt = events['Jets.fCoordinates.fPt'][ievt]
-    jets_eta = events['Jets.fCoordinates.fEta'][ievt]
-    jets_phi = events['Jets.fCoordinates.fPhi'][ievt]
-    jets_e = events['Jets.fCoordinates.fE'][ievt]
-    jets = uproot_methods.TLorentzVectorArray.from_ptetaphie(ak.to_awkward0(jets_pt),
-                                                               ak.to_awkward0(jets_eta),
-                                                               ak.to_awkward0(jets_phi),
-                                                               ak.to_awkward0(jets_e))
+    jets_pt = events["Jets.fCoordinates.fPt"][ievt]
+    jets_eta = events["Jets.fCoordinates.fEta"][ievt]
+    jets_phi = events["Jets.fCoordinates.fPhi"][ievt]
+    jets_e = events["Jets.fCoordinates.fE"][ievt]
+    jets = uproot_methods.TLorentzVectorArray.from_ptetaphie(
+        ak.to_awkward0(jets_pt),
+        ak.to_awkward0(jets_eta),
+        ak.to_awkward0(jets_phi),
+        ak.to_awkward0(jets_e),
+    )
 
     # Cluster AK15 jets and find ISR jet
     jetsAK15 = suepsUtilities.makeJets(tracks, 1.5)
     if len(jetsAK15) == 0:
         continue
     suepJet = suepsUtilities.isrTagger(jetsAK15)
-    isrJet = suepsUtilities.isrTagger(jetsAK15,multiplicity='low')
-    tracks_highMult = tracks[suepsUtilities.deltar(tracks.eta, tracks.phi, suepJet.eta, suepJet.phi)<1.5]
-    tracks_leadPt = tracks[suepsUtilities.deltar(tracks.eta, tracks.phi, jetsAK15[0].eta, jetsAK15[0].phi)<1.5]
-    tracks_noLowMult = tracks[suepsUtilities.deltar(tracks.eta, tracks.phi, isrJet.eta, isrJet.phi)>1.5]
+    isrJet = suepsUtilities.isrTagger(jetsAK15, multiplicity="low")
+    tracks_highMult = tracks[
+        suepsUtilities.deltar(tracks.eta, tracks.phi, suepJet.eta, suepJet.phi) < 1.5
+    ]
+    tracks_leadPt = tracks[
+        suepsUtilities.deltar(tracks.eta, tracks.phi, jetsAK15[0].eta, jetsAK15[0].phi)
+        < 1.5
+    ]
+    tracks_noLowMult = tracks[
+        suepsUtilities.deltar(tracks.eta, tracks.phi, isrJet.eta, isrJet.phi) > 1.5
+    ]
 
     # Filter jets
-    jets_SUEP = jets[suepsUtilities.deltar(jets.eta, jets.phi, suepJet.eta, suepJet.phi)<1.5]
-    jets_ISR = jets[suepsUtilities.deltar(jets.eta, jets.phi, isrJet.eta, isrJet.phi)<1.5]
-    jets_SUEP_total = uproot_methods.TLorentzVectorArray.from_cartesian([np.sum(jets_SUEP.x)],
-                                                                   [np.sum(jets_SUEP.y)],
-                                                                   [np.sum(jets_SUEP.z)],
-                                                                   [np.sum(jets_SUEP.E)])
-    jets_ISR_total = uproot_methods.TLorentzVectorArray.from_cartesian([np.sum(jets_ISR.x)],
-                                                                  [np.sum(jets_ISR.y)],
-                                                                  [np.sum(jets_ISR.z)],
-                                                                  [np.sum(jets_ISR.E)])
+    jets_SUEP = jets[
+        suepsUtilities.deltar(jets.eta, jets.phi, suepJet.eta, suepJet.phi) < 1.5
+    ]
+    jets_ISR = jets[
+        suepsUtilities.deltar(jets.eta, jets.phi, isrJet.eta, isrJet.phi) < 1.5
+    ]
+    jets_SUEP_total = uproot_methods.TLorentzVectorArray.from_cartesian(
+        [np.sum(jets_SUEP.x)],
+        [np.sum(jets_SUEP.y)],
+        [np.sum(jets_SUEP.z)],
+        [np.sum(jets_SUEP.E)],
+    )
+    jets_ISR_total = uproot_methods.TLorentzVectorArray.from_cartesian(
+        [np.sum(jets_ISR.x)],
+        [np.sum(jets_ISR.y)],
+        [np.sum(jets_ISR.z)],
+        [np.sum(jets_ISR.E)],
+    )
 
     # Boost event
-    beta = suepJet.p3/suepJet.energy
-    beta_ak4_suep = jets_SUEP_total.p3/jets_SUEP_total.energy
-    beta_ak4_isr = -jets_ISR_total.p3/jets_ISR_total.energy
-    beta_v[ievt,0] = beta[0].x
-    beta_v[ievt,1] = beta[0].y
-    beta_v[ievt,2] = beta[0].z
-    beta_ak4_suep_v[ievt,0] = beta_ak4_suep[0].x
-    beta_ak4_suep_v[ievt,1] = beta_ak4_suep[0].y
-    beta_ak4_suep_v[ievt,2] = beta_ak4_suep[0].z
-    beta_ak4_isr_v[ievt,0] = beta_ak4_isr[0].x
-    beta_ak4_isr_v[ievt,1] = beta_ak4_isr[0].y
-    beta_ak4_isr_v[ievt,2] = beta_ak4_isr[0].z
+    beta = suepJet.p3 / suepJet.energy
+    beta_ak4_suep = jets_SUEP_total.p3 / jets_SUEP_total.energy
+    beta_ak4_isr = -jets_ISR_total.p3 / jets_ISR_total.energy
+    beta_v[ievt, 0] = beta[0].x
+    beta_v[ievt, 1] = beta[0].y
+    beta_v[ievt, 2] = beta[0].z
+    beta_ak4_suep_v[ievt, 0] = beta_ak4_suep[0].x
+    beta_ak4_suep_v[ievt, 1] = beta_ak4_suep[0].y
+    beta_ak4_suep_v[ievt, 2] = beta_ak4_suep[0].z
+    beta_ak4_isr_v[ievt, 0] = beta_ak4_isr[0].x
+    beta_ak4_isr_v[ievt, 1] = beta_ak4_isr[0].y
+    beta_ak4_isr_v[ievt, 2] = beta_ak4_isr[0].z
     tracks_bst = tracks.boost(-beta)
     isrJet_bst = isrJet.boost(-beta)
 
@@ -127,40 +156,46 @@ for ievt in range(N_events):
     total_E = np.sum(tracks_bst.E)
     iBin = 0
     for i in np.linspace(0.001, 0.002, 6):
-        tracks_relE = tracks_bst[tracks_bst.E/total_E < i]
+        tracks_relE = tracks_bst[tracks_bst.E / total_E < i]
         sphTensor_relE = eventShapesUtilities.sphericityTensor(tracks_relE)
-        sph_relE[ievt,iBin] = eventShapesUtilities.sphericity(sphTensor_relE)
+        sph_relE[ievt, iBin] = eventShapesUtilities.sphericity(sphTensor_relE)
         iBin += 1
 
     # Find delta phi
-    dPhi = tracks_bst.phi-isrJet_bst[0].phi
-    dPhi[dPhi > math.pi] -= 2*math.pi
-    dPhi[dPhi < -math.pi] += 2*math.pi
+    dPhi = tracks_bst.phi - isrJet_bst[0].phi
+    dPhi[dPhi > math.pi] -= 2 * math.pi
+    dPhi[dPhi < -math.pi] += 2 * math.pi
     iBin = 0
     for i in np.linspace(1.5, 2.0, 6):
         tracks_bst_dPhi = tracks_bst[abs(dPhi) > i]
         sphTensor_dPhi = eventShapesUtilities.sphericityTensor(tracks_bst_dPhi)
-        sph_dPhi[ievt,iBin] = eventShapesUtilities.sphericity(sphTensor_dPhi)
+        sph_dPhi[ievt, iBin] = eventShapesUtilities.sphericity(sphTensor_dPhi)
         iBin += 1
 
     sphTensor_allTracks = eventShapesUtilities.sphericityTensor(tracks_bst)
     sphTensor_highMult = eventShapesUtilities.sphericityTensor(tracks_bst_highMult)
     sphTensor_leadPt = eventShapesUtilities.sphericityTensor(tracks_bst_leadPt)
-    sphTensor_leadPt_ak4_suep = eventShapesUtilities.sphericityTensor(tracks_bst_leadPt_ak4_suep)
-    sphTensor_leadPt_ak4_isr = eventShapesUtilities.sphericityTensor(tracks_bst_leadPt_ak4_isr)
+    sphTensor_leadPt_ak4_suep = eventShapesUtilities.sphericityTensor(
+        tracks_bst_leadPt_ak4_suep
+    )
+    sphTensor_leadPt_ak4_isr = eventShapesUtilities.sphericityTensor(
+        tracks_bst_leadPt_ak4_isr
+    )
     sphTensor_noLowMult = eventShapesUtilities.sphericityTensor(tracks_bst_noLowMult)
     sph_allTracks[ievt] = eventShapesUtilities.sphericity(sphTensor_allTracks)
     sph_highMult[ievt] = eventShapesUtilities.sphericity(sphTensor_highMult)
     sph_leadPt[ievt] = eventShapesUtilities.sphericity(sphTensor_leadPt)
-    sph_leadPt_ak4_suep[ievt] = eventShapesUtilities.sphericity(sphTensor_leadPt_ak4_suep)
+    sph_leadPt_ak4_suep[ievt] = eventShapesUtilities.sphericity(
+        sphTensor_leadPt_ak4_suep
+    )
     sph_leadPt_ak4_isr[ievt] = eventShapesUtilities.sphericity(sphTensor_leadPt_ak4_isr)
     sph_noLowMult[ievt] = eventShapesUtilities.sphericity(sphTensor_noLowMult)
 
     trackMultiplicity[ievt] = tracks.size
 
 # Getting cross section and HT and keeping only processed events
-CrossSection = ak.to_numpy(events['CrossSection'])
-HT = ak.to_numpy(events['HT'])
+CrossSection = ak.to_numpy(events["CrossSection"])
+HT = ak.to_numpy(events["HT"])
 CrossSection = CrossSection[:N_events]
 HT = HT[:N_events]
 
@@ -179,7 +214,7 @@ beta_ak4_suep_v = beta_ak4_suep_v[HT >= 1200]
 beta_ak4_isr_v = beta_ak4_isr_v[HT >= 1200]
 trackMultiplicity = trackMultiplicity[HT >= 1200]
 
-with open("%s_altBeta.p"%options.bin, "wb") as f:
+with open("%s_altBeta.p" % options.bin, "wb") as f:
     pickle.dump(N_events, f)
     pickle.dump(CrossSection, f)
     pickle.dump(HT, f)

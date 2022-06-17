@@ -17,36 +17,39 @@ isSignal = True
 mMed = 1000
 mDark = 2
 temp = 2
-#decayMode = 'darkPho'
-decayMode = 'darkPhoHad'
-base = '/Users/chrispap/'
-#base = 'root://cmseos.fnal.gov//store/user/kdipetri/SUEP/Production_v0.2/2018/NTUP/'
-datasets = [base +
-            'PrivateSamples.SUEP_2018_mMed-%d_mDark-%d_temp-%d_decay-%s'
-            '_13TeV-pythia8_n-100_0_RA2AnalysisTree.root'%(mMed, mDark, temp, decayMode),
-           ]
+# decayMode = 'darkPho'
+decayMode = "darkPhoHad"
+base = "/Users/chrispap/"
+# base = 'root://cmseos.fnal.gov//store/user/kdipetri/SUEP/Production_v0.2/2018/NTUP/'
+datasets = [
+    base + "PrivateSamples.SUEP_2018_mMed-%d_mDark-%d_temp-%d_decay-%s"
+    "_13TeV-pythia8_n-100_0_RA2AnalysisTree.root" % (mMed, mDark, temp, decayMode),
+]
 rootfile = datasets[0]
 fin = uproot.open(rootfile)
 
 # Attach the branches to numpy arrays
-tree = fin['TreeMaker2/PreSelection']
+tree = fin["TreeMaker2/PreSelection"]
+
+
 def get_branch(branchname):
     return tree[branchname].array()
 
-GenParticles_pt = get_branch('GenParticles.fCoordinates.fPt')
-GenParticles_eta = get_branch('GenParticles.fCoordinates.fEta')
-GenParticles_phi = get_branch('GenParticles.fCoordinates.fPhi')
-GenParticles_E = get_branch('GenParticles.fCoordinates.fE')
-GenParticles_ParentId = get_branch(b'GenParticles_ParentId')
-GenParticles_PdgId = get_branch(b'GenParticles_PdgId')
-GenParticles_Status = get_branch(b'GenParticles_Status')
-HT = get_branch(b'HT')
 
-Tracks_x = get_branch('Tracks.fCoordinates.fX')
-Tracks_y = get_branch('Tracks.fCoordinates.fY')
-Tracks_z = get_branch('Tracks.fCoordinates.fZ')
-Tracks_fromPV0 = get_branch('Tracks_fromPV0')
-Tracks_matchedToPFCandidate = get_branch('Tracks_matchedToPFCandidate')
+GenParticles_pt = get_branch("GenParticles.fCoordinates.fPt")
+GenParticles_eta = get_branch("GenParticles.fCoordinates.fEta")
+GenParticles_phi = get_branch("GenParticles.fCoordinates.fPhi")
+GenParticles_E = get_branch("GenParticles.fCoordinates.fE")
+GenParticles_ParentId = get_branch(b"GenParticles_ParentId")
+GenParticles_PdgId = get_branch(b"GenParticles_PdgId")
+GenParticles_Status = get_branch(b"GenParticles_Status")
+HT = get_branch(b"HT")
+
+Tracks_x = get_branch("Tracks.fCoordinates.fX")
+Tracks_y = get_branch("Tracks.fCoordinates.fY")
+Tracks_z = get_branch("Tracks.fCoordinates.fZ")
+Tracks_fromPV0 = get_branch("Tracks_fromPV0")
+Tracks_matchedToPFCandidate = get_branch("Tracks_matchedToPFCandidate")
 
 GenParticles_pt = GenParticles_pt[HT > 1200]
 GenParticles_eta = GenParticles_eta[HT > 1200]
@@ -61,21 +64,28 @@ Tracks_z = Tracks_z[HT > 1200]
 Tracks_fromPV0 = Tracks_fromPV0[HT > 1200]
 Tracks_matchedToPFCandidate = Tracks_matchedToPFCandidate[HT > 1200]
 
-Tracks_E = np.sqrt(Tracks_x**2+Tracks_y**2+Tracks_z**2+0.13957**2)
-Tracks = uproot_methods.TLorentzVectorArray.from_cartesian(Tracks_x, Tracks_y, Tracks_z, Tracks_E)
+Tracks_E = np.sqrt(Tracks_x**2 + Tracks_y**2 + Tracks_z**2 + 0.13957**2)
+Tracks = uproot_methods.TLorentzVectorArray.from_cartesian(
+    Tracks_x, Tracks_y, Tracks_z, Tracks_E
+)
 # Select good tracks
-Tracks = Tracks[(Tracks.pt > 1.) &
-                (abs(Tracks.eta) < 2.5) &
-                (Tracks_fromPV0 >= 2) &
-                (Tracks_matchedToPFCandidate > 0)]
+Tracks = Tracks[
+    (Tracks.pt > 1.0)
+    & (abs(Tracks.eta) < 2.5)
+    & (Tracks_fromPV0 >= 2)
+    & (Tracks_matchedToPFCandidate > 0)
+]
 
-GenParticles = uproot_methods.TLorentzVectorArray.from_ptetaphie(GenParticles_pt,
-                                                                 GenParticles_eta,
-                                                                 GenParticles_phi,
-                                                                 GenParticles_E)
+GenParticles = uproot_methods.TLorentzVectorArray.from_ptetaphie(
+    GenParticles_pt, GenParticles_eta, GenParticles_phi, GenParticles_E
+)
 # Keep only final particles
-GenParticles_ParentId = GenParticles_ParentId[(GenParticles_Status == 1) & (GenParticles.pt > 1) & (abs(GenParticles.eta) < 2.5)]
-GenParticles = GenParticles[(GenParticles_Status == 1) & (GenParticles.pt > 1) & (abs(GenParticles.eta) < 2.5)]
+GenParticles_ParentId = GenParticles_ParentId[
+    (GenParticles_Status == 1) & (GenParticles.pt > 1) & (abs(GenParticles.eta) < 2.5)
+]
+GenParticles = GenParticles[
+    (GenParticles_Status == 1) & (GenParticles.pt > 1) & (abs(GenParticles.eta) < 2.5)
+]
 FromScalarParticles = GenParticles[GenParticles_ParentId == 999998]
 IsrParticles = GenParticles[GenParticles_ParentId != 999998]
 
@@ -102,14 +112,18 @@ for ievt in range(GenParticles_Status.size):
     suepJet = suepsUtilities.isrTagger(jetsAK15)
 
     # Boost event
-    fromScalarParticles_bst = fromScalarParticles.boost(-suepJet.p3/suepJet.energy)
-    isrParticles_bst = isrParticles.boost(-suepJet.p3/suepJet.energy)
+    fromScalarParticles_bst = fromScalarParticles.boost(-suepJet.p3 / suepJet.energy)
+    isrParticles_bst = isrParticles.boost(-suepJet.p3 / suepJet.energy)
 
     # Cluster gen AK2 jets
-    genJetsAK2_fromScalar = suepsUtilities.makeJets(fromScalarParticles, 0.2, mode='new')
-    genJetsAK2_ISR = suepsUtilities.makeJets(isrParticles, 0.2, mode='new')
-    genJetsAK2_fromScalar_bst = suepsUtilities.makeJets(fromScalarParticles_bst, 0.2, mode='new')
-    genJetsAK2_ISR_bst = suepsUtilities.makeJets(isrParticles_bst, 0.2, mode='new')
+    genJetsAK2_fromScalar = suepsUtilities.makeJets(
+        fromScalarParticles, 0.2, mode="new"
+    )
+    genJetsAK2_ISR = suepsUtilities.makeJets(isrParticles, 0.2, mode="new")
+    genJetsAK2_fromScalar_bst = suepsUtilities.makeJets(
+        fromScalarParticles_bst, 0.2, mode="new"
+    )
+    genJetsAK2_ISR_bst = suepsUtilities.makeJets(isrParticles_bst, 0.2, mode="new")
 
     E_fromScalar = np.sort(genJetsAK2_fromScalar.energy)
     E_ISR = np.sort(genJetsAK2_ISR.energy)
@@ -120,44 +134,44 @@ for ievt in range(GenParticles_Status.size):
     iter_j = -1
     for i in range(20):
         if E_fromScalar[iter_i] >= E_ISR[iter_j]:
-            h_suep[i] += 1/GenParticles_Status.size
+            h_suep[i] += 1 / GenParticles_Status.size
             iter_i -= 1
         else:
-            h_isr[i] += 1/GenParticles_Status.size
+            h_isr[i] += 1 / GenParticles_Status.size
             iter_j -= 1
 
     iter_i = -1
     iter_j = -1
     for i in range(20):
         if E_fromScalar_bst[iter_i] >= E_ISR_bst[iter_j]:
-            h_suep_bst[i] += 1/GenParticles_Status.size
+            h_suep_bst[i] += 1 / GenParticles_Status.size
             iter_i -= 1
         else:
-            h_isr_bst[i] += 1/GenParticles_Status.size
+            h_isr_bst[i] += 1 / GenParticles_Status.size
             iter_j -= 1
 
 
 # Plot results
-fig = plt.figure(figsize=(8,8))
+fig = plt.figure(figsize=(8, 8))
 ax = plt.gca()
 
-#ax.plot(h_suep, 'r', label='from scalar')
-#ax.plot(h_isr, 'b', label='ISR')
-#ax.set_xlabel('N hardest jet')
+# ax.plot(h_suep, 'r', label='from scalar')
+# ax.plot(h_isr, 'b', label='ISR')
+# ax.set_xlabel('N hardest jet')
 
 for i in range(20):
-    eff_suep[i] = 1-(np.sum(h_suep[:i]))/np.sum(h_suep)
-    eff_isr[i] = np.sum(h_isr[:i])/np.sum(h_isr)
-    eff_suep_bst[i] = 1-(np.sum(h_suep_bst[:i]))/np.sum(h_suep_bst)
-    eff_isr_bst[i] = np.sum(h_isr_bst[:i])/np.sum(h_isr_bst)
+    eff_suep[i] = 1 - (np.sum(h_suep[:i])) / np.sum(h_suep)
+    eff_isr[i] = np.sum(h_isr[:i]) / np.sum(h_isr)
+    eff_suep_bst[i] = 1 - (np.sum(h_suep_bst[:i])) / np.sum(h_suep_bst)
+    eff_isr_bst[i] = np.sum(h_isr_bst[:i]) / np.sum(h_isr_bst)
 
-ax.plot(eff_suep, eff_isr, '.-b', label='no boost')
-ax.plot(eff_suep_bst, eff_isr_bst, '.-r', label='boost, then cluster')
-ax.set_xlim([0,1])
-ax.set_xlabel('$1-\epsilon_{SUEP}$')
-ax.set_ylim([0,1])
-ax.set_ylabel('$\epsilon_{ISR}$')
+ax.plot(eff_suep, eff_isr, ".-b", label="no boost")
+ax.plot(eff_suep_bst, eff_isr_bst, ".-r", label="boost, then cluster")
+ax.set_xlim([0, 1])
+ax.set_xlabel("$1-\epsilon_{SUEP}$")
+ax.set_ylim([0, 1])
+ax.set_ylabel("$\epsilon_{ISR}$")
 plt.legend()
-#fig.savefig('Results/%s.pdf'%variable)
+# fig.savefig('Results/%s.pdf'%variable)
 
 plt.show()

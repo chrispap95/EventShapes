@@ -6,16 +6,19 @@ import uproot
 
 ak.behavior.update(candidate.behavior)
 
+
 class MyProcessor(processor.ProcessorABC):
     def __init__(self):
-        self._accumulator = processor.dict_accumulator({
-            "sumw": processor.defaultdict_accumulator(float),
-            "nTracks": hist.Hist(
-                "Events",
-                hist.Cat("dataset", "Dataset"),
-                hist.Bin("nTracks", "multiplicity", 100, 0, 250),
-            ),
-        })
+        self._accumulator = processor.dict_accumulator(
+            {
+                "sumw": processor.defaultdict_accumulator(float),
+                "nTracks": hist.Hist(
+                    "Events",
+                    hist.Cat("dataset", "Dataset"),
+                    hist.Bin("nTracks", "multiplicity", 100, 0, 250),
+                ),
+            }
+        )
 
     @property
     def accumulator(self):
@@ -24,7 +27,7 @@ class MyProcessor(processor.ProcessorABC):
     def process(self, events):
         output = self.accumulator.identity()
 
-        dataset = events.metadata['dataset']
+        dataset = events.metadata["dataset"]
 
         nTracks = events.nTracks
 
@@ -39,13 +42,14 @@ class MyProcessor(processor.ProcessorABC):
     def postprocess(self, accumulator):
         return accumulator
 
+
 uproot.open.defaults["xrootd_handler"] = uproot.source.xrootd.MultithreadedXRootDSource
 
 filename = "qcd_CUETP8M1.root"
 file = uproot.open(filename)
 events = NanoEventsFactory.from_root(
     file,
-    treepath='tree',
+    treepath="tree",
     entry_stop=10000,
     metadata={"dataset": "CUETP8M1"},
     schemaclass=BaseSchema,
